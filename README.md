@@ -7,5 +7,5 @@ Script development: Yoann Anciaux, Christelle Fraïsse, Pierre-Alexandre Gagnair
 https://popgensealab.wordpress.com/dadi-inference/  
   
   
-Dadi_tuto.tar.gz: contains a standalone version of dadi + folded + expansion + optional cold annealing  
+**Dadi_tuto.tar.gz** contains a standalone version of dadi + folded + expansion + optional cold annealing  
 
