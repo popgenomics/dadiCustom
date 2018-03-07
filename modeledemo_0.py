@@ -2017,3 +2017,422 @@ def PSC2M2Pex(params, (n1,n2), pts):
     fs = P1*P2*fsN1N2 + (1-P1)*(1-P2)*fsI1I2 + P1*(1-P2)*fsN1I2 + (1-P1)*P2*fsI1N2
     return fs
 
+def AM2M2P2N(params, (n1,n2), pts):
+    nu1, nu2, m12, m21, Tam, Ts, P1, P2, nr, bf = params
+    """
+    Model with split, ancient migration; two categories of population size and migration rate in the genome.
+    nu1: Size of population 1 after split.
+    nu2: Size of population 2 after split.
+    m12: Migration from population 2 to population 1 in non-barrier regions.
+    m21: Migration from population 1 to population 2 in non-barrier regions.
+    Tam: Time of ancient migration.
+    Ts: Time of divergence in strict isolation.
+    nr: Proportion of "non-recombining" regions affected by background selection.
+    bf : Background factor, which defines the extent of population size reduction in "nr" regions.
+    P1: Proportion of "non-barrier" regions in population 1.
+    P2: Proportion of "non-barrier" regions in population 2.
+    n1,n2: Size of fs to generate.
+    pts: Number of points to use in grid for evaluation.
+    """
+    xx = dadi.Numerics.default_grid(pts)
+    # Spectrum for non-recombining regions
+    # Spectrum for non-barrier regions in population 1 and 2
+    phinrN1N2 = dadi.PhiManip.phi_1D(xx)
+    phinrN1N2 = dadi.PhiManip.phi_1D_to_2D(xx, phinrN1N2)
+    phinrN1N2 = dadi.Integration.two_pops(phinrN1N2, xx, Tam, nu1*bf, nu2*bf, m12=m12, m21=m21)
+    phinrN1N2 = dadi.Integration.two_pops(phinrN1N2, xx, Ts, nu1*bf, nu2*bf, m12=0, m21=0)
+    fsnrN1N2 = dadi.Spectrum.from_phi(phinrN1N2, (n1,n2), (xx,xx))
+    
+    # Spectrum for barrier regions in population 1 and 2
+    phinrI1I2 = dadi.PhiManip.phi_1D(xx)
+    phinrI1I2 = dadi.PhiManip.phi_1D_to_2D(xx, phinrI1I2)
+    phinrI1I2 = dadi.Integration.two_pops(phinrI1I2, xx, Tam, nu1*bf, nu2*bf, m12=0, m21=0)
+    phinrI1I2 = dadi.Integration.two_pops(phinrI1I2, xx, Ts, nu1*bf, nu2*bf, m12=0, m21=0)
+    fsnrI1I2 = dadi.Spectrum.from_phi(phinrI1I2, (n1,n2), (xx,xx))
+    
+    # Spectrum for non-barrier regions in population 1 and barrier regions in population 2
+    phinrN1I2 = dadi.PhiManip.phi_1D(xx)
+    phinrN1I2 = dadi.PhiManip.phi_1D_to_2D(xx, phinrN1I2)
+    phinrN1I2 = dadi.Integration.two_pops(phinrN1I2, xx, Tam, nu1*bf, nu2*bf, m12=m12, m21=0)
+    phinrN1I2 = dadi.Integration.two_pops(phinrN1I2, xx, Ts, nu1*bf, nu2*bf, m12=0, m21=0)
+    fsnrN1I2 = dadi.Spectrum.from_phi(phinrN1I2, (n1,n2), (xx,xx))
+    
+    # Spectrum for barrier regions in population 1 and non-barrier regions in population 2
+    phinrI1N2 = dadi.PhiManip.phi_1D(xx)
+    phinrI1N2 = dadi.PhiManip.phi_1D_to_2D(xx, phinrI1N2)
+    phinrI1N2 = dadi.Integration.two_pops(phinrI1N2, xx, Tam, nu1*bf, nu2*bf, m12=0, m21=m21)
+    phinrI1N2 = dadi.Integration.two_pops(phinrI1N2, xx, Ts, nu1*bf, nu2*bf, m12=0, m21=0)
+    fsnrI1N2 = dadi.Spectrum.from_phi(phinrI1N2, (n1,n2), (xx,xx))
+    
+    # Spectrum for recombining regions
+    # Spectrum for non-barrier regions in population 1 and 2
+    phirN1N2 = dadi.PhiManip.phi_1D(xx)
+    phirN1N2 = dadi.PhiManip.phi_1D_to_2D(xx, phirN1N2)
+    phirN1N2 = dadi.Integration.two_pops(phirN1N2, xx, Tam, nu1, nu2, m12=m12, m21=m21)
+    phirN1N2 = dadi.Integration.two_pops(phirN1N2, xx, Ts, nu1, nu2, m12=0, m21=0)
+    fsrN1N2 = dadi.Spectrum.from_phi(phirN1N2, (n1,n2), (xx,xx))
+    
+    # Spectrum for barrier regions in population 1 and 2
+    phirI1I2 = dadi.PhiManip.phi_1D(xx)
+    phirI1I2 = dadi.PhiManip.phi_1D_to_2D(xx, phirI1I2)
+    phirI1I2 = dadi.Integration.two_pops(phirI1I2, xx, Tam, nu1, nu2, m12=0, m21=0)
+    phirI1I2 = dadi.Integration.two_pops(phirI1I2, xx, Ts, nu1, nu2, m12=0, m21=0)
+    fsrI1I2 = dadi.Spectrum.from_phi(phirI1I2, (n1,n2), (xx,xx))
+    
+    # Spectrum for non-barrier regions in population 1 and barrier regions in population 2
+    phirN1I2 = dadi.PhiManip.phi_1D(xx)
+    phirN1I2 = dadi.PhiManip.phi_1D_to_2D(xx, phirN1I2)
+    phirN1I2 = dadi.Integration.two_pops(phirN1I2, xx, Tam, nu1, nu2, m12=m12, m21=0)
+    phirN1I2 = dadi.Integration.two_pops(phirN1I2, xx, Ts, nu1, nu2, m12=0, m21=0)
+    fsrN1I2 = dadi.Spectrum.from_phi(phirN1I2, (n1,n2), (xx,xx))
+    
+    # Spectrum for barrier regions in population 1 and non-barrier regions in population 2
+    phirI1N2 = dadi.PhiManip.phi_1D(xx)
+    phirI1N2 = dadi.PhiManip.phi_1D_to_2D(xx, phirI1N2)
+    phirI1N2 = dadi.Integration.two_pops(phirI1N2, xx, Tam, nu1, nu2, m12=0, m21=m21)
+    phirI1N2 = dadi.Integration.two_pops(phirI1N2, xx, Ts, nu1, nu2, m12=0, m21=0)
+    fsrI1N2 = dadi.Spectrum.from_phi(phirI1N2, (n1,n2), (xx,xx))
+    fs = nr*(P1*P2*fsnrN1N2 + (1-P1)*(1-P2)*fsnrI1I2 + P1*(1-P2)*fsnrN1I2 + (1-P1)*P2*fsnrI1N2) + (1-nr)*(P1*P2*fsrN1N2 + (1-P1)*(1-P2)*fsrI1I2 + P1*(1-P2)*fsrN1I2 + (1-P1)*P2*fsrI1N2)
+    return fs
+
+def IM2M2P2N(params, (n1,n2), pts):
+    nu1, nu2, m12, m21, Ts, P1, P2, nr, bf = params
+
+    """
+    Model with continuous migration; two categories of population size and migration rate in the genome. 
+    nu1: Size of population 1 after split.
+    nu2: Size of population 2 after split.
+    m12: Migration from population 2 to population 1 in non-barrier regions.
+    m21: Migration from population 1 to population 2 in non-barrier regions.
+    Ts: Time of divergence in continuous migration.
+    nr: Proportion of "non-recombining" regions affected by background selection.
+    bf : Background factor, which defines the extent of population size reduction in "nr" regions.
+    P1: Proportion of "non-barrier" regions in population 1.
+    P2: Proportion of "non-barrier" regions in population 2.
+    n1,n2: Size of fs to generate.
+    pts: Number of points to use in grid for evaluation.
+    """
+    
+    xx = dadi.Numerics.default_grid(pts)
+
+    ## Spectrum for non-recombining regions
+    # Spectrum for non-barrier regions in population 1 and 2
+    phinrN1N2 = dadi.PhiManip.phi_1D(xx)
+    phinrN1N2 = dadi.PhiManip.phi_1D_to_2D(xx, phinrN1N2)
+    phinrN1N2 = dadi.Integration.two_pops(phinrN1N2, xx, Ts, nu1*bf, nu2*bf, m12=m12, m21=m21)
+    fsnrN1N2 = dadi.Spectrum.from_phi(phinrN1N2, (n1,n2), (xx,xx))
+    
+    # Spectrum for barrier regions in population 1 and 2
+    phinrI1I2 = dadi.PhiManip.phi_1D(xx)
+    phinrI1I2 = dadi.PhiManip.phi_1D_to_2D(xx, phinrI1I2)
+    phinrI1I2 = dadi.Integration.two_pops(phinrI1I2, xx, Ts, nu1*bf, nu2*bf, m12=0, m21=0)
+    fsnrI1I2 = dadi.Spectrum.from_phi(phinrI1I2, (n1,n2), (xx,xx))
+
+    # Spectrum for non-barrier regions in population 1 and barrier regions in population 2
+    phinrN1I2 = dadi.PhiManip.phi_1D(xx)
+    phinrN1I2 = dadi.PhiManip.phi_1D_to_2D(xx, phinrN1I2)
+    phinrN1I2 = dadi.Integration.two_pops(phinrN1I2, xx, Ts, nu1*bf, nu2*bf, m12=m12, m21=0)
+    fsnrN1I2 = dadi.Spectrum.from_phi(phinrN1I2, (n1,n2), (xx,xx))
+
+    # Spectrum for barrier regions in population 1 and non-barrier regions in population 2
+    phinrI1N2 = dadi.PhiManip.phi_1D(xx)
+    phinrI1N2 = dadi.PhiManip.phi_1D_to_2D(xx, phinrI1N2)
+    phinrI1N2 = dadi.Integration.two_pops(phinrI1N2, xx, Ts, nu1*bf, nu2*bf, m12=0, m21=m21)
+    fsnrI1N2 = dadi.Spectrum.from_phi(phinrI1N2, (n1,n2), (xx,xx))
+
+    # Spectrum for recombining regions
+    # Spectrum for non-barrier regions in population 1 and 2
+    phirN1N2 = dadi.PhiManip.phi_1D(xx)
+    phirN1N2 = dadi.PhiManip.phi_1D_to_2D(xx, phirN1N2)
+    phirN1N2 = dadi.Integration.two_pops(phirN1N2, xx, Ts, nu1, nu2, m12=m12, m21=m21)
+    fsrN1N2 = dadi.Spectrum.from_phi(phirN1N2, (n1,n2), (xx,xx))
+
+    # Spectrum for barrier regions in population 1 and 2
+    phirI1I2 = dadi.PhiManip.phi_1D(xx)
+    phirI1I2 = dadi.PhiManip.phi_1D_to_2D(xx, phirI1I2)
+    phirI1I2 = dadi.Integration.two_pops(phirI1I2, xx, Ts, nu1, nu2, m12=0, m21=0)
+    fsrI1I2 = dadi.Spectrum.from_phi(phirI1I2, (n1,n2), (xx,xx))
+
+    # Spectrum for non-barrier regions in population 1 and barrier regions in population 2
+    phirN1I2 = dadi.PhiManip.phi_1D(xx)
+    phirN1I2 = dadi.PhiManip.phi_1D_to_2D(xx, phirN1I2)
+    phirN1I2 = dadi.Integration.two_pops(phirN1I2, xx, Ts, nu1, nu2, m12=m12, m21=0)
+    fsrN1I2 = dadi.Spectrum.from_phi(phirN1I2, (n1,n2), (xx,xx))
+    
+    # Spectrum for barrier regions in population 1 and non-barrier regions in population 2
+    phirI1N2 = dadi.PhiManip.phi_1D(xx)
+    phirI1N2 = dadi.PhiManip.phi_1D_to_2D(xx, phirI1N2)
+    phirI1N2 = dadi.Integration.two_pops(phirI1N2, xx, Ts, nu1, nu2, m12=0, m21=m21)
+    fsrI1N2 = dadi.Spectrum.from_phi(phirI1N2, (n1,n2), (xx,xx))
+
+    fs = nr*(P1*P2*fsnrN1N2 + (1-P1)*(1-P2)*fsnrI1I2 + P1*(1-P2)*fsnrN1I2 + (1-P1)*P2*fsnrI1N2) + (1-nr)*(P1*P2*fsrN1N2 + (1-P1)*(1-P2)*fsrI1I2 + P1*(1-P2)*fsrN1I2 + (1-P1)*P2*fsrI1N2)
+    return fs
+
+def PAM2M2P2N(params, (n1,n2), pts):
+    nu1, nu2, m12, m21, Tam, Ts, P1, P2, nr, bf = params
+    """
+    Model with split, two periods of ancient migration; two categories of population size and migration rate in the genome.
+    nu1: Size of population 1 after split.
+    nu2: Size of population 2 after split.
+    m12: Migration from population 2 to population 1 in non-barrier regions.
+    m21: Migration from population 1 to population 2 in non-barrier regions.
+    Tam: Time of ancient migration.
+    Ts: Time of divergence in strict isolation.
+    nr: Proportion of "non-recombining" regions affected by background selection.
+    bf : Background factor, which defines the extent of population size reduction in "nr" regions.
+    P1: Proportion of "non-barrier" regions in population 1.
+    P2: Proportion of "non-barrier" regions in population 2.
+    n1,n2: Size of fs to generate.
+    pts: Number of points to use in grid for evaluation.
+    """
+    xx = dadi.Numerics.default_grid(pts)
+    
+    # Spectrum for non-recombining regions
+    # Spectrum for non-barrier regions in population 1 and 2
+    phinrN1N2 = dadi.PhiManip.phi_1D(xx)
+    phinrN1N2 = dadi.PhiManip.phi_1D_to_2D(xx, phinrN1N2)
+    phinrN1N2 = dadi.Integration.two_pops(phinrN1N2, xx, Tam, nu1*bf, nu2*bf, m12=m12, m21=m21)
+    phinrN1N2 = dadi.Integration.two_pops(phinrN1N2, xx, Ts, nu1*bf, nu2*bf, m12=0, m21=0)
+    phinrN1N2 = dadi.Integration.two_pops(phinrN1N2, xx, Tam, nu1*bf, nu2*bf, m12=m12, m21=m21)
+    phinrN1N2 = dadi.Integration.two_pops(phinrN1N2, xx, Ts, nu1*bf, nu2*bf, m12=0, m21=0)
+    fsnrN1N2 = dadi.Spectrum.from_phi(phinrN1N2, (n1,n2), (xx,xx))
+    
+    # Spectrum for barrier regions in population 1 and 2
+    phinrI1I2 = dadi.PhiManip.phi_1D(xx)
+    phinrI1I2 = dadi.PhiManip.phi_1D_to_2D(xx, phinrI1I2)
+    phinrI1I2 = dadi.Integration.two_pops(phinrI1I2, xx, Tam, nu1*bf, nu2*bf, m12=0, m21=0)
+    phinrI1I2 = dadi.Integration.two_pops(phinrI1I2, xx, Ts, nu1*bf, nu2*bf, m12=0, m21=0)
+    phinrI1I2 = dadi.Integration.two_pops(phinrI1I2, xx, Tam, nu1*bf, nu2*bf, m12=0, m21=0)
+    phinrI1I2 = dadi.Integration.two_pops(phinrI1I2, xx, Ts, nu1*bf, nu2*bf, m12=0, m21=0)
+    fsnrI1I2 = dadi.Spectrum.from_phi(phinrI1I2, (n1,n2), (xx,xx))
+    
+    # Spectrum for non-barrier regions in population 1 and barrier regions in population 2
+    phinrN1I2 = dadi.PhiManip.phi_1D(xx)
+    phinrN1I2 = dadi.PhiManip.phi_1D_to_2D(xx, phinrN1I2)
+    phinrN1I2 = dadi.Integration.two_pops(phinrN1I2, xx, Tam, nu1*bf, nu2*bf, m12=m12, m21=0)
+    phinrN1I2 = dadi.Integration.two_pops(phinrN1I2, xx, Ts, nu1*bf, nu2*bf, m12=0, m21=0)
+    phinrN1I2 = dadi.Integration.two_pops(phinrN1I2, xx, Tam, nu1*bf, nu2*bf, m12=m12, m21=0)
+    phinrN1I2 = dadi.Integration.two_pops(phinrN1I2, xx, Ts, nu1*bf, nu2*bf, m12=0, m21=0)
+    fsnrN1I2 = dadi.Spectrum.from_phi(phinrN1I2, (n1,n2), (xx,xx))
+    
+    # Spectrum for barrier regions in population 1 and non-barrier regions in population 2
+    phinrI1N2 = dadi.PhiManip.phi_1D(xx)
+    phinrI1N2 = dadi.PhiManip.phi_1D_to_2D(xx, phinrI1N2)
+    phinrI1N2 = dadi.Integration.two_pops(phinrI1N2, xx, Tam, nu1*bf, nu2*bf, m12=0, m21=m21)
+    phinrI1N2 = dadi.Integration.two_pops(phinrI1N2, xx, Ts, nu1*bf, nu2*bf, m12=0, m21=0)
+    phinrI1N2 = dadi.Integration.two_pops(phinrI1N2, xx, Tam, nu1*bf, nu2*bf, m12=0, m21=m21)
+    phinrI1N2 = dadi.Integration.two_pops(phinrI1N2, xx, Ts, nu1*bf, nu2*bf, m12=0, m21=0)
+    fsnrI1N2 = dadi.Spectrum.from_phi(phinrI1N2, (n1,n2), (xx,xx))
+    
+    # Spectrum for recombining regions
+    # Spectrum for non-barrier regions in population 1 and 2
+    phirN1N2 = dadi.PhiManip.phi_1D(xx)
+    phirN1N2 = dadi.PhiManip.phi_1D_to_2D(xx, phirN1N2)
+    phirN1N2 = dadi.Integration.two_pops(phirN1N2, xx, Tam, nu1, nu2, m12=m12, m21=m21)
+    phirN1N2 = dadi.Integration.two_pops(phirN1N2, xx, Ts, nu1, nu2, m12=0, m21=0)
+    phirN1N2 = dadi.Integration.two_pops(phirN1N2, xx, Tam, nu1, nu2, m12=m12, m21=m21)
+    phirN1N2 = dadi.Integration.two_pops(phirN1N2, xx, Ts, nu1, nu2, m12=0, m21=0)
+    fsrN1N2 = dadi.Spectrum.from_phi(phirN1N2, (n1,n2), (xx,xx))
+    
+    # Spectrum for barrier regions in population 1 and 2
+    phirI1I2 = dadi.PhiManip.phi_1D(xx)
+    phirI1I2 = dadi.PhiManip.phi_1D_to_2D(xx, phirI1I2)
+    phirI1I2 = dadi.Integration.two_pops(phirI1I2, xx, Tam, nu1, nu2, m12=0, m21=0)
+    phirI1I2 = dadi.Integration.two_pops(phirI1I2, xx, Ts, nu1, nu2, m12=0, m21=0)
+    phirI1I2 = dadi.Integration.two_pops(phirI1I2, xx, Tam, nu1, nu2, m12=0, m21=0)
+    phirI1I2 = dadi.Integration.two_pops(phirI1I2, xx, Ts, nu1, nu2, m12=0, m21=0)
+    fsrI1I2 = dadi.Spectrum.from_phi(phirI1I2, (n1,n2), (xx,xx))
+    
+    # Spectrum for non-barrier regions in population 1 and barrier regions in population 2
+    phirN1I2 = dadi.PhiManip.phi_1D(xx)
+    phirN1I2 = dadi.PhiManip.phi_1D_to_2D(xx, phirN1I2)
+    phirN1I2 = dadi.Integration.two_pops(phirN1I2, xx, Tam, nu1, nu2, m12=m12, m21=0)
+    phirN1I2 = dadi.Integration.two_pops(phirN1I2, xx, Ts, nu1, nu2, m12=0, m21=0)
+    phirN1I2 = dadi.Integration.two_pops(phirN1I2, xx, Tam, nu1, nu2, m12=m12, m21=0)
+    phirN1I2 = dadi.Integration.two_pops(phirN1I2, xx, Ts, nu1, nu2, m12=0, m21=0)
+    fsrN1I2 = dadi.Spectrum.from_phi(phirN1I2, (n1,n2), (xx,xx))
+    
+    # Spectrum for barrier regions in population 1 and non-barrier regions in population 2
+    phirI1N2 = dadi.PhiManip.phi_1D(xx)
+    phirI1N2 = dadi.PhiManip.phi_1D_to_2D(xx, phirI1N2)
+    phirI1N2 = dadi.Integration.two_pops(phirI1N2, xx, Tam, nu1, nu2, m12=0, m21=m21)
+    phirI1N2 = dadi.Integration.two_pops(phirI1N2, xx, Ts, nu1, nu2, m12=0, m21=0)
+    phirI1N2 = dadi.Integration.two_pops(phirI1N2, xx, Tam, nu1, nu2, m12=0, m21=m21)
+    phirI1N2 = dadi.Integration.two_pops(phirI1N2, xx, Ts, nu1, nu2, m12=0, m21=0)
+    fsrI1N2 = dadi.Spectrum.from_phi(phirI1N2, (n1,n2), (xx,xx))
+    
+    fs = nr*(P1*P2*fsnrN1N2 + (1-P1)*(1-P2)*fsnrI1I2 + P1*(1-P2)*fsnrN1I2 + (1-P1)*P2*fsnrI1N2) + (1-nr)*(P1*P2*fsrN1N2 + (1-P1)*(1-P2)*fsrI1I2 + P1*(1-P2)*fsrN1I2 + (1-P1)*P2*fsrI1N2)
+    return fs
+
+def PSC2M2P2N(params, (n1,n2), pts):
+    nu1, nu2, m12, m21, Ts, Tsc, P1, P2, nr, bf = params
+    """
+    Model with split, strict isolation, and two periods of secondary contact; two categories of population size and migration rate in the genome.
+    nu1: Size of population 1 after split.
+    nu2: Size of population 2 after split.
+    m12: Migration from population 2 to population 1 in non-barrier regions.
+    m21: Migration from population 1 to population 2 in non-barrier regions.
+    Ts: Time of divergence in strict isolation.
+    Tsc: Time of secondary contact.
+    nr: Proportion of "non-recombining" regions affected by background selection.
+    bf : Background factor, which defines the extent of population size reduction in "nr" regions.
+    P1: Proportion of "non-barrier" regions in population 1.
+    P2: Proportion of "non-barrier" regions in population 2.
+    n1,n2: Size of fs to generate.
+    pts: Number of points to use in grid for evaluation.
+    """
+    xx = dadi.Numerics.default_grid(pts)
+    # Spectrum for non-recombining regions
+    # Spectrum for non-barrier regions in population 1 and 2
+    phinrN1N2 = dadi.PhiManip.phi_1D(xx)
+    phinrN1N2 = dadi.PhiManip.phi_1D_to_2D(xx, phinrN1N2)
+    phinrN1N2 = dadi.Integration.two_pops(phinrN1N2, xx, Ts, nu1*bf, nu2*bf, m12=0, m21=0)
+    phinrN1N2 = dadi.Integration.two_pops(phinrN1N2, xx, Tsc, nu1*bf, nu2*bf, m12=m12, m21=m21)
+    phinrN1N2 = dadi.Integration.two_pops(phinrN1N2, xx, Ts, nu1*bf, nu2*bf, m12=0, m21=0)
+    phinrN1N2 = dadi.Integration.two_pops(phinrN1N2, xx, Tsc, nu1*bf, nu2*bf, m12=m12, m21=m21)
+    fsnrN1N2 = dadi.Spectrum.from_phi(phinrN1N2, (n1,n2), (xx,xx))
+    
+    # Spectrum for barrier regions in population 1 and 2
+    phinrI1I2 = dadi.PhiManip.phi_1D(xx)
+    phinrI1I2 = dadi.PhiManip.phi_1D_to_2D(xx, phinrI1I2)
+    phinrI1I2 = dadi.Integration.two_pops(phinrI1I2, xx, Ts, nu1*bf, nu2*bf, m12=0, m21=0)
+    phinrI1I2 = dadi.Integration.two_pops(phinrI1I2, xx, Tsc, nu1*bf, nu2*bf, m12=0, m21=0)
+    phinrI1I2 = dadi.Integration.two_pops(phinrI1I2, xx, Ts, nu1*bf, nu2*bf, m12=0, m21=0)
+    phinrI1I2 = dadi.Integration.two_pops(phinrI1I2, xx, Tsc, nu1*bf, nu2*bf, m12=0, m21=0)
+    fsnrI1I2 = dadi.Spectrum.from_phi(phinrI1I2, (n1,n2), (xx,xx))
+    
+    # Spectrum for non-barrier regions in population 1 and barrier regions in population 2
+    phinrN1I2 = dadi.PhiManip.phi_1D(xx)
+    phinrN1I2 = dadi.PhiManip.phi_1D_to_2D(xx, phinrN1I2)
+    phinrN1I2 = dadi.Integration.two_pops(phinrN1I2, xx, Ts, nu1*bf, nu2*bf, m12=0, m21=0)
+    phinrN1I2 = dadi.Integration.two_pops(phinrN1I2, xx, Tsc, nu1*bf, nu2*bf, m12=m12, m21=0)
+    phinrN1I2 = dadi.Integration.two_pops(phinrN1I2, xx, Ts, nu1*bf, nu2*bf, m12=0, m21=0)
+    phinrN1I2 = dadi.Integration.two_pops(phinrN1I2, xx, Tsc, nu1*bf, nu2*bf, m12=m12, m21=0)
+    fsnrN1I2 = dadi.Spectrum.from_phi(phinrN1I2, (n1,n2), (xx,xx))
+    
+    # Spectrum for barrier regions in population 1 and non-barrier regions in population 2
+    phinrI1N2 = dadi.PhiManip.phi_1D(xx)
+    phinrI1N2 = dadi.PhiManip.phi_1D_to_2D(xx, phinrI1N2)
+    phinrI1N2 = dadi.Integration.two_pops(phinrI1N2, xx, Ts, nu1*bf, nu2*bf, m12=0, m21=0)
+    phinrI1N2 = dadi.Integration.two_pops(phinrI1N2, xx, Tsc, nu1*bf, nu2*bf, m12=0, m21=m21)
+    phinrI1N2 = dadi.Integration.two_pops(phinrI1N2, xx, Ts, nu1*bf, nu2*bf, m12=0, m21=0)
+    phinrI1N2 = dadi.Integration.two_pops(phinrI1N2, xx, Tsc, nu1*bf, nu2*bf, m12=0, m21=m21)
+    fsnrI1N2 = dadi.Spectrum.from_phi(phinrI1N2, (n1,n2), (xx,xx))
+    
+    # Spectrum for recombining regions
+    # Spectrum for non-barrier regions in population 1 and 2
+    phirN1N2 = dadi.PhiManip.phi_1D(xx)
+    phirN1N2 = dadi.PhiManip.phi_1D_to_2D(xx, phirN1N2)
+    phirN1N2 = dadi.Integration.two_pops(phirN1N2, xx, Ts, nu1, nu2, m12=0, m21=0)
+    phirN1N2 = dadi.Integration.two_pops(phirN1N2, xx, Tsc, nu1, nu2, m12=m12, m21=m21)
+    phirN1N2 = dadi.Integration.two_pops(phirN1N2, xx, Ts, nu1, nu2, m12=0, m21=0)
+    phirN1N2 = dadi.Integration.two_pops(phirN1N2, xx, Tsc, nu1, nu2, m12=m12, m21=m21)
+    fsrN1N2 = dadi.Spectrum.from_phi(phirN1N2, (n1,n2), (xx,xx))
+    
+    # Spectrum for barrier regions in population 1 and 2
+    phirI1I2 = dadi.PhiManip.phi_1D(xx)
+    phirI1I2 = dadi.PhiManip.phi_1D_to_2D(xx, phirI1I2)
+    phirI1I2 = dadi.Integration.two_pops(phirI1I2, xx, Ts, nu1, nu2, m12=0, m21=0)
+    phirI1I2 = dadi.Integration.two_pops(phirI1I2, xx, Tsc, nu1, nu2, m12=0, m21=0)
+    phirI1I2 = dadi.Integration.two_pops(phirI1I2, xx, Ts, nu1, nu2, m12=0, m21=0)
+    phirI1I2 = dadi.Integration.two_pops(phirI1I2, xx, Tsc, nu1, nu2, m12=0, m21=0)
+    fsrI1I2 = dadi.Spectrum.from_phi(phirI1I2, (n1,n2), (xx,xx))
+    
+    # Spectrum for non-barrier regions in population 1 and barrier regions in population 2
+    phirN1I2 = dadi.PhiManip.phi_1D(xx)
+    phirN1I2 = dadi.PhiManip.phi_1D_to_2D(xx, phirN1I2)
+    phirN1I2 = dadi.Integration.two_pops(phirN1I2, xx, Ts, nu1, nu2, m12=0, m21=0)
+    phirN1I2 = dadi.Integration.two_pops(phirN1I2, xx, Tsc, nu1, nu2, m12=m12, m21=0)
+    phirN1I2 = dadi.Integration.two_pops(phirN1I2, xx, Ts, nu1, nu2, m12=0, m21=0)
+    phirN1I2 = dadi.Integration.two_pops(phirN1I2, xx, Tsc, nu1, nu2, m12=m12, m21=0)
+    fsrN1I2 = dadi.Spectrum.from_phi(phirN1I2, (n1,n2), (xx,xx))
+    
+    # Spectrum for barrier regions in population 1 and non-barrier regions in population 2
+    phirI1N2 = dadi.PhiManip.phi_1D(xx)
+    phirI1N2 = dadi.PhiManip.phi_1D_to_2D(xx, phirI1N2)
+    phirI1N2 = dadi.Integration.two_pops(phirI1N2, xx, Ts, nu1, nu2, m12=0, m21=0)
+    phirI1N2 = dadi.Integration.two_pops(phirI1N2, xx, Tsc, nu1, nu2, m12=0, m21=m21)
+    phirI1N2 = dadi.Integration.two_pops(phirI1N2, xx, Ts, nu1, nu2, m12=0, m21=0)
+    phirI1N2 = dadi.Integration.two_pops(phirI1N2, xx, Tsc, nu1, nu2, m12=0, m21=m21)
+    fsrI1N2 = dadi.Spectrum.from_phi(phirI1N2, (n1,n2), (xx,xx))
+    fs = nr*(P1*P2*fsnrN1N2 + (1-P1)*(1-P2)*fsnrI1I2 + P1*(1-P2)*fsnrN1I2 + (1-P1)*P2*fsnrI1N2) + (1-nr)*(P1*P2*fsrN1N2 + (1-P1)*(1-P2)*fsrI1I2 + P1*(1-P2)*fsrN1I2 + (1-P1)*P2*fsrI1N2)
+
+    return fs
+
+def SC2M2P2N(params, (n1,n2), pts):
+    nu1, nu2, m12, m21, Ts, Tsc, P1, P2, nr, bf = params
+    """
+    Model with split, strict isolation, and secondary contact; two categories of population size and migration rate in the genome.
+    nu1: Size of population 1 after split.
+    nu2: Size of population 2 after split.
+    m12: Migration from population 2 to population 1 in non-barrier regions.
+    m21: Migration from population 1 to population 2 in non-barrier regions.
+    Ts: Time of divergence in strict isolation.
+    Tsc: Time of secondary contact.
+    nr: Proportion of "non-recombining" regions affected by background selection.
+    bf : Background factor, which defines the extent of population size reduction in "nr" regions.
+    P1: Proportion of "non-barrier" regions in population 1.
+    P2: Proportion of "non-barrier" regions in population 2.
+    n1,n2: Size of fs to generate.
+    pts: Number of points to use in grid for evaluation.
+    """
+    xx = dadi.Numerics.default_grid(pts)
+    # Spectrum for non-recombining regions
+    # Spectrum for non-barrier regions in population 1 and 2
+    phinrN1N2 = dadi.PhiManip.phi_1D(xx)
+    phinrN1N2 = dadi.PhiManip.phi_1D_to_2D(xx, phinrN1N2)
+    phinrN1N2 = dadi.Integration.two_pops(phinrN1N2, xx, Ts, nu1*bf, nu2*bf, m12=0, m21=0)
+    phinrN1N2 = dadi.Integration.two_pops(phinrN1N2, xx, Tsc, nu1*bf, nu2*bf, m12=m12, m21=m21)
+    fsnrN1N2 = dadi.Spectrum.from_phi(phinrN1N2, (n1,n2), (xx,xx))
+    
+    # Spectrum for barrier regions in population 1 and 2
+    phinrI1I2 = dadi.PhiManip.phi_1D(xx)
+    phinrI1I2 = dadi.PhiManip.phi_1D_to_2D(xx, phinrI1I2)
+    phinrI1I2 = dadi.Integration.two_pops(phinrI1I2, xx, Ts, nu1*bf, nu2*bf, m12=0, m21=0)
+    phinrI1I2 = dadi.Integration.two_pops(phinrI1I2, xx, Tsc, nu1*bf, nu2*bf, m12=0, m21=0)
+    fsnrI1I2 = dadi.Spectrum.from_phi(phinrI1I2, (n1,n2), (xx,xx))
+    
+    # Spectrum for non-barrier regions in population 1 and barrier regions in population 2
+    phinrN1I2 = dadi.PhiManip.phi_1D(xx)
+    phinrN1I2 = dadi.PhiManip.phi_1D_to_2D(xx, phinrN1I2)
+    phinrN1I2 = dadi.Integration.two_pops(phinrN1I2, xx, Ts, nu1*bf, nu2*bf, m12=0, m21=0)
+    phinrN1I2 = dadi.Integration.two_pops(phinrN1I2, xx, Tsc, nu1*bf, nu2*bf, m12=m12, m21=0)
+    fsnrN1I2 = dadi.Spectrum.from_phi(phinrN1I2, (n1,n2), (xx,xx))
+    
+    # Spectrum for barrier regions in population 1 and non-barrier regions in population 2
+    phinrI1N2 = dadi.PhiManip.phi_1D(xx)
+    phinrI1N2 = dadi.PhiManip.phi_1D_to_2D(xx, phinrI1N2)
+    phinrI1N2 = dadi.Integration.two_pops(phinrI1N2, xx, Ts, nu1*bf, nu2*bf, m12=0, m21=0)
+    phinrI1N2 = dadi.Integration.two_pops(phinrI1N2, xx, Tsc, nu1*bf, nu2*bf, m12=0, m21=m21)
+    fsnrI1N2 = dadi.Spectrum.from_phi(phinrI1N2, (n1,n2), (xx,xx))
+    
+    # Spectrum for recombining regions
+    # Spectrum for non-barrier regions in population 1 and 2
+    phirN1N2 = dadi.PhiManip.phi_1D(xx)
+    phirN1N2 = dadi.PhiManip.phi_1D_to_2D(xx, phirN1N2)
+    phirN1N2 = dadi.Integration.two_pops(phirN1N2, xx, Ts, nu1, nu2, m12=0, m21=0)
+    phirN1N2 = dadi.Integration.two_pops(phirN1N2, xx, Tsc, nu1, nu2, m12=m12, m21=m21)
+    fsrN1N2 = dadi.Spectrum.from_phi(phirN1N2, (n1,n2), (xx,xx))
+    
+    # Spectrum for barrier regions in population 1 and 2
+    phirI1I2 = dadi.Integration.two_pops(phirI1I2, xx, Tsc, nu1, nu2, m12=0, m21=0)
+    fsrI1I2 = dadi.Spectrum.from_phi(phirI1I2, (n1,n2), (xx,xx))
+    
+    # Spectrum for non-barrier regions in population 1 and barrier regions in population 2
+    phirN1I2 = dadi.PhiManip.phi_1D(xx)
+    phirN1I2 = dadi.PhiManip.phi_1D_to_2D(xx, phirN1I2)
+    phirN1I2 = dadi.Integration.two_pops(phirN1I2, xx, Ts, nu1, nu2, m12=0, m21=0)
+    phirN1I2 = dadi.Integration.two_pops(phirN1I2, xx, Tsc, nu1, nu2, m12=m12, m21=0)
+    fsrN1I2 = dadi.Spectrum.from_phi(phirN1I2, (n1,n2), (xx,xx))
+    
+    # Spectrum for barrier regions in population 1 and non-barrier regions in population 2
+    phirI1N2 = dadi.PhiManip.phi_1D(xx)
+    phirI1N2 = dadi.PhiManip.phi_1D_to_2D(xx, phirI1N2)
+    phirI1N2 = dadi.Integration.two_pops(phirI1N2, xx, Ts, nu1, nu2, m12=0, m21=0)
+    phirI1N2 = dadi.Integration.two_pops(phirI1N2, xx, Tsc, nu1, nu2, m12=0, m21=m21)
+    fsrI1N2 = dadi.Spectrum.from_phi(phirI1N2, (n1,n2), (xx,xx))
+    fs = nr*(P1*P2*fsnrN1N2 + (1-P1)*(1-P2)*fsnrI1I2 + P1*(1-P2)*fsnrN1I2 + (1-P1)*P2*fsnrI1N2) + (1-nr)*(P1*P2*fsrN1N2 + (1-P1)*(1-P2)*fsrI1I2 + P1*(1-P2)*fsrN1I2 + (1-P1)*P2*fsrI1N2)
+
+    return fs
+
+

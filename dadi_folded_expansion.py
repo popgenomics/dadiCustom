@@ -49,7 +49,7 @@ def usage():
 	      "# -o --outputname : Take the path of output file.\n"+
 	      "# -f --fs_file_name : Take the path of the fs file from thr parent directory.\n"+
 	      "# -p --grid_points : Take 3 numbers separated by a coma, for the size of grids for extrapolation.\n"+
-	      "# -m --model_list : Take until 34 names of model (PAN, PAN2N, PANex, PAN2Nex, SI,SIex,SI2N,SI2Nex,IM,IMex,AM,AMex,PAM,PAMex,SC,SCex,PSC,PSCex,IM2M,IM2Mex,AM2M,AM2Mex,PAM2M,PAM2Mex,SC2M,SC2Mex,PSC2M,PSC2Mex,IM2M2P,IM2M2Pex,AM2M2P,AM2M2Pex,PAM2M2P,PAM2M2Pex,SC2M2P,SC2M2Pex,PSC2M2P,PSC2M2Pex) separated by a coma.\n"+
+	      "# -m --model_list : Take until 39 names of model (PAN, PAN2N, PANex, PAN2Nex, SI,SIex,SI2N,SI2Nex,IM,IMex,AM,AMex,PAM,PAMex,SC,SCex,PSC,PSCex,IM2M,IM2Mex,AM2M,AM2Mex,PAM2M,PAM2Mex,SC2M,SC2Mex,PSC2M,PSC2Mex,IM2M2P,IM2M2Pex,AM2M2P,AM2M2Pex,PAM2M2P,PAM2M2Pex,SC2M2P,SC2M2Pex,PSC2M2P,PSC2M2Pex,AM2M2P2N,IM2M2P2N,PAM2M2P2N,PSC2M2P2N,SC2M2P2N) separated by a coma.\n"+
 	      "# For more information on models see docstrings in the module modeledemo.\n"+
 	      "# -z : mask the singletons.\n"+
 	      "# -r : residual_range (maximum number of SNPs for the color-gradient in residual plots)\n"+
@@ -68,7 +68,7 @@ def takearg(argv):
 	masked = False # freq 0,1 and 1,0 masked if masked = 1
 	pts_l = None  # Grids sizes for extrapolation
 	outputname = "fs_2d_optlog"
-	model_list = ["PAN", "PAN2N", "PANex", "PAN2Nex", "SI", "SIex", "SI2N", "SI2Nex", "IM", "IMex", "AM", "AMex", "PAM", "PAMex", "SC", "SCex", "PSC", "PSCex", "IM2M", "IM2Mex", "AM2M", "AM2Mex", "PAM2M", "PAM2Mex", "SC2M", "SC2Mex", "PSC2M", "PSC2Mex", "IM2M2P", "IM2M2Pex", "AM2M2P", "AM2M2Pex", "PAM2M2P", "PAM2M2Pex", "SC2M2P", "SC2M2Pex", "PSC2M2P", "PSC2M2Pex"]
+	model_list = ["PAN", "PAN2N", "PANex", "PAN2Nex", "SI", "SIex", "SI2N", "SI2Nex", "IM", "IMex", "IM2M2P2N", "AM", "AMex", "AM2M2P2N", "PAM", "PAMex", "PAM2M2P2N", "SC", "SCex", "SC2M2P2N", "PSC", "PSCex", "PSC2M2P2N", "IM2M", "IM2Mex", "AM2M", "AM2Mex", "PAM2M", "PAM2Mex", "SC2M", "SC2Mex", "PSC2M", "PSC2Mex", "IM2M2P", "IM2M2Pex", "AM2M2P", "AM2M2Pex", "PAM2M2P", "PAM2M2Pex", "SC2M2P", "SC2M2Pex", "PSC2M2P", "PSC2M2Pex"]
 	verbose = False
 	logparam = False
 	cold = False
@@ -991,5 +991,91 @@ for namemodel in model_list:
 								  verbose=verbose, maxiter=20, Tini=50, Tfin=0, learn_rate=0.005, 
 								  schedule= "cauchy")
 		if done: print(("\n" + namemodel + " : done\n"))
+	
+	if (namemodel == "AM2M2P2N") or (namemodel == "PAM2M2P2N"):
+                # Custom Ancient Migration with 2 Migration rate model and 2 Proportion of loci: nu1, nu2, m12, m21, Ts, Tam, P1, P2, nr, bf
+                if namemodel == "AM2M2P2N":
+                    func = modeledemo_0.AM2M2P2N
+                else :
+                    func = modeledemo_0.PAM2M2P2N
+                for optimizationstate in opt_list:
+                        print optimizationstate
+                        if optimizationstate == "anneal_hot":
+                                params = (1, 1, 1, 1, 1, 1, 0.5, 0.5, 0.5, 1)
+                        elif optimizationstate == "anneal_cold":
+                                params = (popt[0], popt[1], popt[2], popt[3], popt[4], popt[5], popt[6], popt[7], popt[8], popt[9])
+                        else :
+                                params = (popt[0], popt[1], popt[2], popt[3], popt[4], popt[5], popt[6], popt[7], popt[8], popt[9])
+                        # The upper_bound array is for use in optimization. Occasionally the optimizer
+                        # will try wacky parameter values. We in particular want to exclude values with
+                        # very long times, as they will take a long time to evaluate.
+                        #upper_bound = [100, 100, 20, 20, 12, 12, 1.00, 1.00] # original
+                        upper_bound = [nu1_max, nu2_max, m12_max, m21_max, Ts_max, Tam_max, P1_max, P2_max, nr_max, bf_max] # CRoux
+                        lower_bound = [nu1_min, nu2_min, m12_min, m21_min, Ts_min, Tam_min, P1_min, P2_min, nr_min, bf_max] # CRoux
+                        #lower_bound = [0.01, 0.01, 0, 0, 0, 0, 0.00, 0.00]
+                        done, ll_opt_dic, nbparam_dic, popt = callmodel(func, data, output_file,output_file_2, namemodel, ll_opt_dic, nbparam_dic,
+                                                                  nompop1=nompop1, nompop2=nompop2, params=params, fixed_params=None, lower_bound=lower_bound,
+                                                                  upper_bound=upper_bound,  pts_l=pts_l, ns=ns,
+                                                                  outputname= outputname + "/" + outputname,  outputname2=outputname,
+                                                                  verbose=verbose, maxiter=20, Tini=50, Tfin=0, learn_rate=0.005,
+                                                                  schedule= "cauchy")
+                if done: print(("\n" + namemodel + " : done\n"))
+	
+	
+        if (namemodel == "SC2M2P2N") or (namemodel == "PSC2M2P2N"):
+                # Custom Secondary contact with 2 Ne, 2 Migration rate model and 2 Proportion of loci: nu1, nu2, m12, m21, Ts, Tsc, P1, P2, nr, bf
+                if namemodel == "SC2M2P2N":
+                    func = modeledemo_0.SC2M2P2N
+                else :
+                    func = modeledemo_0.PSC2M2P2N
+                for optimizationstate in opt_list:
+                        print optimizationstate
+                        if optimizationstate == "anneal_hot":
+                                params = (1, 1, 1, 1, 1, 1, 0.5, 0.5, 0.5, 1)
+                        elif optimizationstate == "anneal_cold":
+                                params = (popt[0], popt[1], popt[2], popt[3], popt[4], popt[5], popt[6], popt[7], popt[8], popt[9])
+                        else :
+                                params = (popt[0], popt[1], popt[2], popt[3], popt[4], popt[5], popt[6], popt[7], popt[8], popt[9])
+
+                        # The upper_bound array is for use in optimization. Occasionally the optimizer
+                        # will try wacky parameter values. We in particular want to exclude values with
+                        # very long times, as they will take a long time to evaluate.
+                        #upper_bound = [100, 100, 20, 20, 12, 12, 1.00, 1.00] # original
+                        upper_bound = [nu1_max, nu2_max, m12_max, m21_max, Ts_max, Tsc_max, P1_max, P2_max, nr_max, bf_max] # CRoux
+                        lower_bound = [nu1_min, nu2_min, m12_min, m21_min, Ts_min, Tsc_min, P1_min, P2_min, nr_min, bf_min] # CRoux
+                        #lower_bound = [0.01, 0.01, 0, 0, 0, 0, 0.00, 0.00]
+                        done, ll_opt_dic, nbparam_dic, popt = callmodel(func, data, output_file, output_file_2, namemodel, ll_opt_dic, nbparam_dic,
+                                                                  nompop1=nompop1, nompop2=nompop2, params=params, fixed_params=None, lower_bound=lower_bound,
+                                                                  upper_bound=upper_bound,  pts_l=pts_l, ns=ns,
+                                                                  outputname= outputname + "/" + outputname,  outputname2=outputname,
+                                                                  verbose=verbose, maxiter=20, Tini=50, Tfin=0, learn_rate=0.005,
+                                                                  schedule= "cauchy")
+                if done: print(("\n" + namemodel + " : done\n"))
+	
+        if namemodel == "IM2M2P2N":
+                # Custom Isolation with 2 Migration rate model and 2 Proportion of loci: nu1, nu2, m12, m21, Ts, P1, P2, nr, bf
+                func = modeledemo_0.IM2M2P2N
+                for optimizationstate in opt_list:
+                        print optimizationstate
+                        if optimizationstate == "anneal_hot":
+                                params = (1, 1, 1, 1, 1, 0.5, 0.5, 0.5, 1)
+                        elif optimizationstate == "anneal_cold":
+                                params = (popt[0], popt[1], popt[2], popt[3], popt[4], popt[5], popt[6], popt[7], popt[8])
+                        else :
+                                params = (popt[0], popt[1], popt[2], popt[3], popt[4], popt[5], popt[6], popt[7], popt[8])
+                        # The upper_bound array is for use in optimization. Occasionally the optimizer
+                        # will try wacky parameter values. We in particular want to exclude values with
+                        # very long times, as they will take a long time to evaluate.
+                        #upper_bound = [100, 100, 20, 20, 12, 1.00, 1.00] # original
+                        upper_bound = [nu1_max, nu2_max, m12_max, m21_max, Ts_max, P1_max, P2_max, nr_max, bf_max] # CRoux
+                        lower_bound = [nu1_min, nu2_min, m12_min, m21_min, Ts_min, P1_min, P2_min, nr_min, bf_min] # CRoux
+                        done, ll_opt_dic, nbparam_dic, popt = callmodel(func, data, output_file,output_file_2, namemodel, ll_opt_dic, nbparam_dic,
+                                                                  nompop1=nompop1, nompop2=nompop2, params=params, fixed_params=None, lower_bound=lower_bound,
+                                                                  upper_bound=upper_bound,  pts_l=pts_l, ns=ns,
+                                                                  outputname= outputname + "/" + outputname,  outputname2=outputname,
+                                                                  verbose=verbose, maxiter=20, Tini=50, Tfin=0, learn_rate=0.005,
+                                                                  schedule= "cauchy")
+                if done: print(("\n" + namemodel + " : done\n"))
+
 output_file.close()
 output_file_2.close()
